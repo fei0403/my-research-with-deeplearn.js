@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>socket</title>
+    <meta charset="UTF-8">
+    <style>
+        #g {
+            border: 1px solid black;
+            height: 800px;
+            width: 800px;
+        }
+
+    </style>
+    <script src="https://unpkg.com/deeplearn"></script>
+</head>
+
+<body>
+</body>
+<script>
+    'use strict'
+    var dl = deeplearn;
+    var math = new dl.NDArrayMathCPU();
+    
+    
+    
+    const n = dl.Scalar.new(0.1);
+    
+    
+    
+    const data = [dl.Array2D.new([3,1],[0,0,1]),dl.Array2D.new([3,1],[0,1,1]),dl.Array2D.new([3,1],[1,0,1]),dl.Array2D.new([3,1],[1,1,1])];
+    const label = dl.Array1D.new([0,1,1,0]);
+    
+    var wih = dl.Array2D.randNormal([3,3]); //输入层2个节点,包含偏置为3个节点，隐藏层3个节点,wih * data计算得到隐藏层的输出值，为3个元素的列向量
+    var who = dl.Array2D.randNormal([1,3]); //输出层1个节点
+    
+    //wih = dl.Array2D.new([3,3],[1,2,3,4,5,6,7,8,9]);
+    //who = dl.Array2D.new([1,3],[1,2,3]); //这里要修改成1*4的，带偏置项
+    
+    var output = dl.Array1D.new([0,0,0,0]);//输出
+    
+    //console.log("模型初始化完成，开始训练调整权重");
+    
+    var c = 0;
+    while(loss(output) > 0.01){//误差平方和小于0.01为合格
+        c++;
+        //前项计算
+        //counter--;
+        if(c % 100 ==0){
+            document.write("第"+c+"轮的loss值为"+loss(output)+"<br>");
+            
+        }
+        data.forEach(function(value,index,array){ //对每个样本
+            //前向计算
+            var outih = math.sigmoid(math.matMul(wih,value));//3*1
+            
+            //console.log("隐藏层计算结果为"+outih.getValues());
+            var out = math.sigmoid(math.matMul(who,outih));//1*1
+            //console.log("输出为"+out.getValues());
+            //反向传播调整权重
+            var y = out.getValues();
+            var t = label.getValues()[index];
+            if(y != t){
+                //console.log("输出结果和label不同，开始BP");
+                //计算误差
+                var deltay = y * (1-y) * (t-y);
+                //console.log("输出层误差为"+deltay);
+                //console.log("计算得到的")
+                let deltaihp1 = math.subtract(dl.Scalar.new(1),outih);
+                //console.log(deltaihp1.getValues()+":"+deltaihp1.shape);
+                let deltaihp2 = math.multiply(outih , deltaihp1);
+                //console.log(deltaihp2.getValues()+":"+deltaihp2.shape);
+                let deltaihp3 = math.multiply(dl.Scalar.new(deltay),deltaihp2);
+                
+                //console.log(deltaihp3.getValues()+":"+deltaihp3.shape);
+                let deltaihp4 = math.multiply(deltaihp3 , math.transpose(who));
+                //console.log(deltaihp4.getValues()+":"+deltaihp4.shape);
+                
+                
+               
+                //计算得到的deltaihp4为隐藏层3个节点的误差
+                //console.log("开始调整权重");
+                //调整权重
+                //wih = math.add(wih , math.multiply(n,math.multiply()))
+                var wihp1 = math.matMul(deltaihp4,math.transpose(value));
+                //console.log(wihp1.getValues());
+                var wihp2 = math.multiply(n,wihp1);
+                //console.log(wihp2.getValues());
+                wih = math.add(wih,wihp2);
+                
+                who = math.add(who,math.multiply(dl.Scalar.new(deltay),math.transpose(outih)));
+                
+                //console.log("权重调整结束，计算输出");
+                //console.log("调整后的权重为wih"+wih.getValues());
+                //console.log("调整后的权重为who"+who.getValues());
+                //前向计算
+            var outih = math.sigmoid(math.matMul(wih,value));//3*1
+            
+            //console.log("隐藏层计算结果为"+outih.getValues());
+            var out = math.sigmoid(math.matMul(who,outih));//1*1
+                //console.log("调整后的隐藏层结果计算为"+outih.getValues());
+                output.set(out.getValues(),index);
+                //console.log("output更新为"+out.getValues()+",更新位置为"+index+"更新后的output为"+output.getValues());
+            }
+        })
+    }
+    
+    
+    document.write("计算结果为<br>");
+            data.forEach(function(value,index,array){ //对每个样本
+                var outih = math.sigmoid(math.matMul(wih,value));//3*1
+                var out = math.sigmoid(math.matMul(who,outih));//1*1
+                var v = value.getValues();
+                document.write(v[0]+"异或"+v[1]+"="+out.getValues()+"<br>");
+            })
+            
+            
+    
+    function loss(output){ //计算loss，认为误差平方和小于0.01为合格
+        let result = math.subtract(label,output);
+        //console.log("loss值为"+math.dotProduct(result,result).getValues());
+        return math.dotProduct(result,result).getValues();
+    }
+
+
+    
+</script>
+
+</html>
